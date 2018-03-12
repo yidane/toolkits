@@ -27,25 +27,9 @@ func IsBankNo(no string) (bool, error) {
 	}
 
 	//luhn校验
-	total := 0
-	for i := 1; i < len(no); i++ {
-		num, _ := strconv.Atoi(no[i-1 : i])
-		if i%2 == 0 {
-			v := num * 2
-			if v < 9 {
-				total += v
-			} else {
-				total += v - 9
-			}
-		} else {
-			total += num
-		}
-	}
-
+	luhn := CreateLuhn(no[:len(no)-1])
 	lastNum, _ := strconv.Atoi(no[len(no)-1:])
-	total += lastNum
-
-	if total%10 != 0 {
+	if luhn != lastNum {
 		return false, errors.New(`Luhn校验失败`)
 	}
 
@@ -59,17 +43,21 @@ func CreateLuhn(no string) int {
 		return -1
 	}
 
+	return createLuhn(no)
+}
+
+func createLuhn(no string) int {
 	total := 0
 	for i := 1; i <= len(no); i++ {
 		num, _ := strconv.Atoi(no[i-1 : i])
-		if i%2 == 0 {
+		switch i % 2 {
+		case 0:
 			v := num * 2
-			if v < 9 {
-				total += v
-			} else {
-				total += v - 9
+			total += v
+			if v > 9 {
+				total += -9
 			}
-		} else {
+		case 1:
 			total += num
 		}
 	}
