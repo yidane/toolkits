@@ -1,7 +1,6 @@
 package toolkits
 
 import (
-	"fmt"
 	"runtime"
 	"sync"
 	"testing"
@@ -33,7 +32,7 @@ func TestCreateOrderNoBench(t *testing.T) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	wg := sync.WaitGroup{}
-	total := 20000000
+	total := 2000
 	wg.Add(total)
 	for i := 0; i < total; i++ {
 		go func() {
@@ -44,8 +43,6 @@ func TestCreateOrderNoBench(t *testing.T) {
 	}
 
 	wg.Wait()
-
-	fmt.Println(len(nos))
 }
 
 func BenchmarkCreateOrderNo(b *testing.B) {
