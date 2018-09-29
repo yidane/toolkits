@@ -1,4 +1,4 @@
-package shortID
+package id
 
 import (
 	"bytes"
