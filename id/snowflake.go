@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+// https://segmentfault.com/a/1190000011282426
+
 const (
 	epoch              int64 = 1524199200000 //2018-04-20 12:40:000. The moment when my son born!
 	workerIDBits       uint  = 5
