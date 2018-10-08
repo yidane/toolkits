@@ -27,7 +27,7 @@ func TestSnowflake_NewID1(t *testing.T) {
 
 	ids := map[int64]int{}
 
-	total := 1 << 22
+	total := 1 << 25
 	for i := 0; i < total; i++ {
 		id, err := snowflake.NewID()
 		if err != nil {
