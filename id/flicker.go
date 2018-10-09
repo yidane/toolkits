@@ -4,27 +4,28 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/go-sql-driver/mysql"
-	_ "github.com/go-sql-driver/mysql"
 	"log"
 	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 const defaultBatchSize int64 = 10000
 const defaultTableName string = "flicker_sequence"
 
 type Flicker struct {
-	stub      string
-	batchSize int64
-	sequence  int64
-	maxId     int64
-	currentId int64
-	ready     bool
-	tableName string
-	lock      sync.RWMutex
-	db        *sql.DB
+	stub          string
+	batchSize     int64
+	sequence      int64
+	maxId         int64
+	currentId     int64
+	ready         bool
+	autoMigration bool
+	tableName     string
+	lock          sync.RWMutex
+	db            *sql.DB
 }
 
 //NewFlicker create instance of Flicker
@@ -32,6 +33,7 @@ func NewFlicker(db *sql.DB) *Flicker {
 	flicker := &Flicker{
 		stub:      defaultStub(),
 		batchSize: defaultBatchSize,
+		tableName: defaultTableName,
 		db:        db,
 		lock:      sync.RWMutex{},
 	}
@@ -69,26 +71,53 @@ func (flicker *Flicker) SetTableName(tableName string) *Flicker {
 	return flicker
 }
 
+//SetAutoMigration set field autoMigration for creating table automatically
+func (flicker *Flicker) SetAutoMigration(f bool) *Flicker {
+	flicker.autoMigration = f
+	return flicker
+}
+
 //Ready check all config is ready
 func (flicker *Flicker) Ready() error {
+	flicker.lock.Lock()
+	defer flicker.lock.Unlock()
+
 	if flicker.ready {
 		return nil
 	}
 
+	if err := flicker.dbPing(); err != nil {
+		return err
+	}
+
+	if err := flicker.migration(); err != nil {
+		return err
+	}
+
+	flicker.ready = true
+
+	return nil
+}
+
+func (flicker *Flicker) dbPing() error {
 	if flicker.db == nil {
 		return fmt.Errorf("mysql connection is nil")
 	}
 
 	var dri interface{} = flicker.db.Driver()
 	if _, ok := dri.(*mysql.MySQLDriver); !ok {
-		return fmt.Errorf("database type must be mysql")
+		return fmt.Errorf("database must be mysql")
 	}
 
-	if err := flicker.db.Ping(); err != nil {
+	return flicker.db.Ping()
+}
+
+func (flicker *Flicker) migration() error {
+	if flicker.autoMigration {
+		createSql := fmt.Sprintf("create table if not exists %s(id bigint auto_increment primary key,stub varchar(100) unique key);", flicker.tableName)
+		_, err := flicker.db.Exec(createSql)
 		return err
 	}
-
-	flicker.ready = true
 
 	return nil
 }
@@ -123,14 +152,13 @@ func defaultStub() string {
 	return hostName
 }
 
-func (flicker *Flicker) newSequence() error {
-	result, err := flicker.db.Exec("")
+func (flicker *Flicker) newSequence() (int64, error) {
+	result, err := flicker.db.Exec(fmt.Sprintf("REPLACE INTO %s (stub) VALUES ('%s');", flicker.tableName, flicker.stub))
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	fmt.Println(result)
-	return nil
+	return result.LastInsertId()
 }
 
 //NewID create new id
@@ -139,9 +167,23 @@ func (flicker *Flicker) NewID() (int64, error) {
 		return 0, fmt.Errorf("the instance of Flicker isn't ready,please call the func Ready and check the result first")
 	}
 
-	flicker.lock.Lock()
-	defer flicker.lock.Unlock()
+	if flicker.currentId >= flicker.maxId {
+		flicker.lock.Lock()
+		defer flicker.lock.Unlock()
 
+		if flicker.currentId >= flicker.maxId {
+			id, err := flicker.newSequence()
+			for err != nil {
+				time.Sleep(time.Second * 1)
+				id, err = flicker.newSequence()
+			}
+
+			atomic.SwapInt64(&flicker.sequence, id)
+			atomic.SwapInt64(&flicker.currentId, id*flicker.batchSize)
+			atomic.SwapInt64(&flicker.maxId, flicker.currentId)
+			atomic.AddInt64(&flicker.maxId, flicker.batchSize)
+		}
+	}
 	atomic.AddInt64(&flicker.currentId, 1)
 
 	return flicker.currentId, nil
