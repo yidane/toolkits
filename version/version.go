@@ -1,23 +1,29 @@
 package version
 
 import (
+	"bytes"
 	"fmt"
 	"strconv"
 	"strings"
 )
 
-//Version description version like Major.Minor.Patch
+//Version description GNC Version like Major_Version_Number.Minor_Version_Number[.Revision_Number[.Build_Number]] as follow
+//sample1：1.2
+//sample2：1.2.0
+//sample3：1.2.0.1234
 type Version struct {
-	Major int
-	Minor int
-	Patch int
+	Major    int
+	Minor    int
+	Revision int
+	Build    int
 }
 
-func New(major, minor, patch int) Version {
+func New(major, minor, revision, build int) Version {
 	return Version{
-		Major: major,
-		Minor: minor,
-		Patch: patch,
+		Major:    major,
+		Minor:    minor,
+		Revision: revision,
+		Build:    build,
 	}
 }
 
@@ -25,28 +31,47 @@ func New(major, minor, patch int) Version {
 //if s = 1.2.3.4, only 1.2.3 can be used
 func Parse(s string) (v Version, err error) {
 	arr := strings.Split(s, ".")
-	v.Major, err = strconv.Atoi(arr[0])
-	if err != nil {
-		return
-	}
+	m := make(map[int]int, 4)
 
-	if len(arr) > 1 {
-		v.Minor, err = strconv.Atoi(arr[1])
+	var n int
+	for i := 0; i < len(arr); i++ {
+		n, err = strconv.Atoi(arr[i])
 		if err != nil {
 			return
 		}
+
+		m[i] = n
 	}
 
-	if len(arr) > 2 {
-		v.Patch, err = strconv.Atoi(arr[2])
-	}
+	//map if not exists, return default value 0
+	v.Major = m[0]
+	v.Minor = m[1]
+	v.Revision = m[2]
+	v.Build = m[3]
 
 	return
 }
 
 //String return string about Version,like 1.2.3
 func (v Version) String() string {
-	return fmt.Sprintf("%d.%d.%d", v.Major, v.Minor, v.Patch)
+	buf := bytes.Buffer{}
+	//at least has Major and Minor
+	buf.WriteString(fmt.Sprintf("%d.%d", v.Major, v.Minor))
+
+	s := make([]int, 0)
+	if v.Build != 0 {
+		s = append(s, v.Build)
+	}
+
+	if v.Revision != 0 || len(s) > 0 {
+		s = append(s, v.Revision)
+	}
+
+	for i := len(s) - 1; i >= 0; i-- {
+		buf.WriteString(fmt.Sprintf(".%d", s[i]))
+	}
+
+	return buf.String()
 }
 
 //CompareTo for compare tow version and return a int
@@ -54,25 +79,31 @@ func (v Version) String() string {
 //if return 0, v == other
 //if return 1, v > other
 func (v Version) CompareTo(other Version) int {
-	switch {
-	case v.Major > other.Major:
-		return 1
-	case v.Major < other.Major:
-		return -1
+	//compare from big to small
+	arr := [][]int{
+		{v.Major, other.Major},
+		{v.Minor, other.Minor},
+		{v.Revision, other.Revision},
+		{v.Build, other.Build},
 	}
 
-	switch {
-	case v.Minor > other.Minor:
-		return 1
-	case v.Minor < other.Minor:
-		return -1
-	}
+	num1, num2, result := 0, 0, 0
+	for i := 0; i < len(arr); i++ {
+		num1 = arr[i][0]
+		num2 = arr[i][1]
 
-	switch {
-	case v.Patch > other.Patch:
-		return 1
-	case v.Patch < other.Patch:
-		return -1
+		switch {
+		case num1 > num2:
+			result = 1
+		case num1 < num2:
+			result = -1
+		default:
+			result = 0
+		}
+
+		if result != 0 {
+			return result
+		}
 	}
 
 	return 0
