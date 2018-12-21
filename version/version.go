@@ -43,7 +43,7 @@ func Parse(s string) (v Version, err error) {
 		m[i] = n
 	}
 
-	//map if not exists, return default value 0
+	//if key not exists in map, it will return default value 0
 	v.Major = m[0]
 	v.Minor = m[1]
 	v.Revision = m[2]
