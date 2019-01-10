@@ -2,6 +2,7 @@ package io
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"testing"
 )
@@ -51,6 +52,12 @@ func TestDirectory_GetFiles(t *testing.T) {
 
 	fmt.Println(len(dirs))
 	for _, v := range dirs {
-		fmt.Println(v.FullName)
+		fmt.Println(v.FullName())
+	}
+
+	fs, _ := ioutil.ReadDir(path)
+	fmt.Println(len(fs))
+	for _, v := range fs {
+		fmt.Println(v.Name())
 	}
 }

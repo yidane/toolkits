@@ -3,6 +3,7 @@ package io
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -27,15 +28,15 @@ func NewDirectory(path string) (*Directory, error) {
 		return nil, errors.New("argument path must be directory")
 	}
 
-	return newDirectory(path, fileInfo)
+	return newDirectory(path, fileInfo), nil
 }
 
-func newDirectory(path string, fileInfo os.FileInfo) (*Directory, error) {
+func newDirectory(path string, fileInfo os.FileInfo) *Directory {
 	dir := new(Directory)
 	dir.FileInfo = fileInfo
 	dir.fullName = path
 
-	return dir, nil
+	return dir
 }
 
 func CreateDirectory(path string, perm os.FileMode) (*Directory, error) {
@@ -107,23 +108,20 @@ func (dir *Directory) RemoveAll() error {
 	return os.Mkdir(dir.fullName, mode)
 }
 
+//GetDirectories return all sub directories
 func (dir *Directory) GetDirectories() ([]*Directory, error) {
 	dirs := make([]*Directory, 0)
-	err := filepath.Walk(dir.fullName, func(path string, info os.FileInfo, err error) error {
-		if info.IsDir() {
-			if os.SameFile(info, dir.FileInfo) {
-				return nil
-			}
+	fileInfos, err := ioutil.ReadDir(dir.fullName)
 
-			directory, err := newDirectory(path, info)
-			if err != nil {
-				return err
-			}
+	if err != nil {
+		return nil, err
+	}
 
-			dirs = append(dirs, directory)
+	for _, fileInfo := range fileInfos {
+		if fileInfo.IsDir() {
+			dirs = append(dirs, newDirectory(filepath.Join(dir.fullName, fileInfo.Name()), fileInfo))
 		}
-		return nil
-	})
+	}
 
 	if err != nil {
 		return nil, err
@@ -136,16 +134,34 @@ func (dir *Directory) GetDirectories() ([]*Directory, error) {
 	return dirs, nil
 }
 
+//GetFiles return all sub files
 func (dir *Directory) GetFiles() ([]*FileInfo, error) {
+	files := make([]*FileInfo, 0)
+	fileInfos, err := ioutil.ReadDir(dir.fullName)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, fileInfo := range fileInfos {
+		if fileInfo.Mode().IsRegular() {
+			files = append(files, newFile(filepath.Join(dir.fullName, fileInfo.Name()), fileInfo))
+		}
+	}
+
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].Name() < files[j].Name()
+	})
+
+	return files, nil
+}
+
+//GetAllFiles return all files include sub directory in the directory tree
+func (dir *Directory) GetAllFiles() ([]*FileInfo, error) {
 	files := make([]*FileInfo, 0)
 	err := filepath.Walk(dir.fullName, func(path string, info os.FileInfo, err error) error {
 		if info.Mode().IsRegular() {
-			fileInfo, err := newFile(path, info)
-			if err != nil {
-				return err
-			}
-
-			files = append(files, fileInfo)
+			files = append(files, newFile(path, info))
 		}
 		return nil
 	})

@@ -24,13 +24,13 @@ func NewFile(path string) (*FileInfo, error) {
 		return nil, errors.New("argument path should be a file path")
 	}
 
-	return newFile(path, fileInfo)
+	return newFile(path, fileInfo), nil
 }
 
-func newFile(path string, fileInfo os.FileInfo) (*FileInfo, error) {
+func newFile(path string, fileInfo os.FileInfo) *FileInfo {
 	f := new(FileInfo)
 	f.FileInfo = fileInfo
 	f.fullName = path
 
-	return f, nil
+	return f
 }
