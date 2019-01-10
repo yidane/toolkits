@@ -108,3 +108,11 @@ func (v Version) CompareTo(other Version) int {
 
 	return 0
 }
+
+//Equal tow version equal,you also can use "==" instead
+func (v Version) Equal(other Version) bool {
+	return v.Major == other.Major &&
+		v.Minor == other.Minor &&
+		v.Revision == other.Revision &&
+		v.Build == other.Build
+}
