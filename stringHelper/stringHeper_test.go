@@ -1,4 +1,4 @@
-package toolkits
+package stringHelper
 
 import (
 	"testing"
