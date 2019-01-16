@@ -10,12 +10,10 @@ import (
 
 const dirName = "toolkit"
 
-func toolkitPath() string {
-	return filepath.Join(os.TempDir(), dirName)
-}
+var basePath = filepath.Join(os.TempDir(), dirName)
 
 func TestDirectory_GetDirectories(t *testing.T) {
-	dir, err := NewDirectory(toolkitPath())
+	dir, err := NewDirectory(basePath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +50,7 @@ func TestDirectory_GetDirectories(t *testing.T) {
 }
 
 func TestDirectory_GetFiles(t *testing.T) {
-	dir, err := NewDirectory(toolkitPath())
+	dir, err := NewDirectory(basePath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +72,7 @@ func TestDirectory_GetFiles(t *testing.T) {
 		fmt.Println(v.FullName())
 	}
 
-	fs, _ := ioutil.ReadDir(toolkitPath())
+	fs, _ := ioutil.ReadDir(basePath)
 	fmt.Println(len(fs))
 	for _, v := range fs {
 		fmt.Println(v.Name())
@@ -102,11 +100,41 @@ func TestDirectory_Root(t *testing.T) {
 }
 
 func TestNewDirectory(t *testing.T) {
+	dir, err := NewDirectory(filepath.Join(basePath, "NewDirectory"))
+	if err != nil {
+		t.Fatal(err)
+	}
 
+	if dir.Exists() {
+		fmt.Println(fmt.Sprintf("directory %s exists", dir.FullName()))
+	} else {
+		fmt.Println(fmt.Sprintf("directory %s do not exists", dir.FullName()))
+	}
 }
 
 func TestDirectory_Create(t *testing.T) {
+	dir, err := NewDirectory(filepath.Join(basePath, "Create"))
+	if err != nil {
+		t.Fatal(err)
+	}
 
+	if !dir.Exists() {
+		fmt.Println("directory not exists :", dir.FullName())
+		err = dir.Create(os.ModePerm)
+		if err != nil {
+			t.Fatal(err)
+		} else {
+			fmt.Println("directory created :", dir.FullName())
+		}
+	} else {
+		fmt.Println("directory exists :", dir.FullName())
+	}
+
+	err = dir.Delete()
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("directory deleted :", dir.FullName())
 }
 
 func TestDirectory_CreateSubDirectory(t *testing.T) {
@@ -150,5 +178,21 @@ func TestDirectory_MoveTo(t *testing.T) {
 }
 
 func TestDirectory_SetAccessControl(t *testing.T) {
+
+}
+
+func TestDirectory_Contains(t *testing.T) {
+
+}
+
+func TestDirectory_CreateFile(t *testing.T) {
+
+}
+
+func Test_newDirectory(t *testing.T) {
+
+}
+
+func TestDirectory_GetFile(t *testing.T) {
 
 }

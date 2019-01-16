@@ -54,6 +54,9 @@ func NewDirectory(dirPath string) (*Directory, error) {
 
 	fileInfo, err := os.Stat(dirPath)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return dir, nil
+		}
 		return nil, err
 	}
 
