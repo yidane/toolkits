@@ -5,7 +5,9 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
+	"time"
 )
 
 const dirName = "toolkit"
@@ -23,18 +25,22 @@ func TestDirectory_GetDirectories(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Fatal()
-
 	f, err := dir.Contains("1")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if f {
-		dir.RemoveSubDirectory("1")
+		err = dir.RemoveSubDirectory("1")
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
-	dir.CreateSubDirectory("1", os.ModePerm)
+	err = dir.CreateSubDirectory("1", os.ModePerm)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	fmt.Println(dir.Name())
 
@@ -62,7 +68,11 @@ func TestDirectory_GetFiles(t *testing.T) {
 		}
 	}
 
-	dir.Create(os.ModePerm)
+	err = dir.Create(os.ModePerm)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	files, err := dir.GetFiles()
 	if err != nil {
 		t.Fatal(err)
@@ -80,15 +90,54 @@ func TestDirectory_GetFiles(t *testing.T) {
 }
 
 func TestDirectory_FullName(t *testing.T) {
+	dir, err := NewDirectory(filepath.Join(basePath, "FullName"))
+	if err != nil {
+		t.Fatal(err)
+	}
 
+	fullName := dir.FullName()
+	if len(fullName) == 0 {
+		t.Fatal("fullName is nothing")
+	}
+
+	fmt.Println(fullName)
 }
 
 func TestDirectory_Name(t *testing.T) {
+	name := "Name"
+	dir, err := NewDirectory(filepath.Join(basePath, name))
+	if err != nil {
+		t.Fatal(err)
+	}
 
+	if name != dir.Name() {
+		t.Fatal("Name should be equal ", name)
+	}
 }
 
 func TestDirectory_Exists(t *testing.T) {
+	dir, err := NewDirectory(filepath.Join(basePath, "Exists"))
+	if err != nil {
+		t.Fatal(err)
+	}
 
+	if dir.Exists() {
+		t.Fatal("dir ", dir.FullName(), " should be not exists")
+	}
+
+	err = dir.Create(os.ModePerm)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !dir.Exists() {
+		t.Fatal("dir ", dir.FullName(), " should be exists")
+	}
+
+	err = dir.Delete()
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestDirectory_Parent(t *testing.T) {
@@ -138,27 +187,243 @@ func TestDirectory_Create(t *testing.T) {
 }
 
 func TestDirectory_CreateSubDirectory(t *testing.T) {
+	dir, err := NewDirectory(filepath.Join(basePath, "CreateSubDirectory"))
+	if err != nil {
+		t.Fatal(err)
+	}
 
+	if !dir.Exists() {
+		err = dir.Create(os.ModePerm)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	u := time.Now().UnixNano()
+	var i int64 = 0
+	for ; i < 10; i++ {
+		name := strconv.FormatInt(u+i, 10)
+		err = dir.CreateSubDirectory(name, os.ModePerm)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 }
 
 func TestDirectory_Delete(t *testing.T) {
+	dir, err := NewDirectory(filepath.Join(basePath, "Delete"))
+	if err != nil {
+		t.Fatal(err)
+	}
 
+	exists := dir.Exists()
+	fmt.Println("directory ", dir.FullName(), "exists :", exists)
+
+	err = dir.Delete()
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("delete 1st")
+
+	err = dir.Create(os.ModePerm)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("directory ", dir.FullName(), "created")
+
+	exists = dir.Exists()
+	fmt.Println("directory ", dir.FullName(), "exists :", exists)
+
+	err = dir.Delete()
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("delete 2nd")
+
+	exists = dir.Exists()
+	fmt.Println("directory ", dir.FullName(), "exists :", exists)
 }
 
 func TestDirectory_RemoveSubDirectory(t *testing.T) {
+	dir, err := NewDirectory(filepath.Join(basePath, "RemoveSubDirectory"))
+	if err != nil {
+		t.Fatal(err)
+	}
 
+	if !dir.Exists() {
+		err = dir.Create(os.ModePerm)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	const name = "SubDirectory"
+
+	reportContain := func() {
+		f, err := dir.Contains(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		fmt.Println(name, "contain :", f)
+	}
+
+	reportContain()
+
+	err = dir.CreateSubDirectory(name, os.ModePerm)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("CreateSubDirectory")
+
+	reportContain()
+
+	err = dir.RemoveSubDirectory(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	reportContain()
 }
 
 func TestDirectory_RemoveAllSubDirectory(t *testing.T) {
+	dir, err := NewDirectory(filepath.Join(basePath, "RemoveSubDirectory"))
+	if err != nil {
+		t.Fatal(err)
+	}
 
+	if !dir.Exists() {
+		err = dir.Create(os.ModePerm)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	reportDir := func() {
+		subDirs, err := dir.GetDirectories()
+		if err != nil {
+			t.Fatal(err)
+		}
+		fmt.Println("contain subdirectory : ", len(subDirs))
+	}
+
+	reportDir()
+
+	u := time.Now().UnixNano()
+	var i int64 = 0
+	for ; i < 10; i++ {
+		name := strconv.FormatInt(u+i, 10)
+		err = dir.CreateSubDirectory(name, os.ModePerm)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	reportDir()
+
+	err = dir.RemoveAllSubDirectory()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	reportDir()
 }
 
 func TestDirectory_RemoveAll(t *testing.T) {
+	dir, err := NewDirectory(filepath.Join(basePath, "RemoveAll"))
+	if err != nil {
+		t.Fatal(err)
+	}
 
+	if !dir.Exists() {
+		err = dir.Create(os.ModePerm)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	var reportDir = func() {
+		subDirs, err := dir.GetDirectories()
+		if err != nil {
+			t.Fatal(err)
+		}
+		fmt.Println("contain subdirectory : ", len(subDirs))
+
+		files, err := dir.GetFiles()
+		if err != nil {
+			t.Fatal(err)
+		}
+		fmt.Println("contain files : ", len(files))
+	}
+
+	reportDir()
+
+	u := time.Now().UnixNano()
+	var i int64 = 0
+	for ; i < 20; i++ {
+		name := strconv.FormatInt(u+i, 10)
+		if i%2 == 0 {
+			err = dir.CreateSubDirectory(name, os.ModePerm)
+			if err != nil {
+				t.Fatal(err)
+			}
+		} else {
+			_, err = dir.CreateFile(name)
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	reportDir()
+
+	err = dir.RemoveAll()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	reportDir()
 }
 
 func TestDirectory_GetDirectory(t *testing.T) {
+	dir, err := NewDirectory(filepath.Join(basePath, "GetDirectory"))
+	if err != nil {
+		t.Fatal(err)
+	}
 
+	if !dir.Exists() {
+		err = dir.Create(os.ModePerm)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	const name = "yidane"
+
+	reportExists := func() {
+		directory, err := dir.GetDirectory(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		fmt.Println("directory ", name, " exists :", directory.Exists())
+	}
+
+	reportExists()
+
+	err = dir.CreateSubDirectory(name, os.ModePerm)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("CreateSubDirectory")
+	reportExists()
+
+	err = dir.RemoveSubDirectory(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("RemoveSubDirectory")
+
+	reportExists()
 }
 
 func TestDirectory_GetDirectoriesLike(t *testing.T) {
@@ -186,10 +451,6 @@ func TestDirectory_Contains(t *testing.T) {
 }
 
 func TestDirectory_CreateFile(t *testing.T) {
-
-}
-
-func Test_newDirectory(t *testing.T) {
 
 }
 

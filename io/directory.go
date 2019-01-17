@@ -19,6 +19,10 @@ func (dir *Directory) FullName() string {
 	return dir.fullName
 }
 
+func (dir *Directory) Name() string {
+	return path.Base(dir.fullName)
+}
+
 //Exists return whether the dir existed
 func (dir *Directory) Exists() bool {
 	return dir.FileInfo != nil
@@ -73,7 +77,7 @@ func (dir *Directory) Create(perm os.FileMode) error {
 		return nil
 	}
 
-	err := os.Mkdir(dir.fullName, perm)
+	err := os.MkdirAll(dir.fullName, perm)
 	if err != nil {
 		return err
 	}
@@ -107,7 +111,7 @@ func (dir *Directory) CreateSubDirectory(name string, perm os.FileMode) error {
 
 func (dir *Directory) Delete() error {
 	err := os.RemoveAll(dir.fullName)
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
 
@@ -142,13 +146,22 @@ func (dir *Directory) RemoveSubDirectory(names ...string) error {
 }
 
 func (dir *Directory) RemoveAllSubDirectory() error {
-	return filepath.Walk(dir.fullName, func(path string, info os.FileInfo, err error) error {
-		if info.IsDir() {
-			return os.Remove(path)
-		}
+	files, err := ioutil.ReadDir(dir.fullName)
+	if err != nil {
+		return err
+	}
 
-		return nil
-	})
+	for i := 0; i < len(files); i++ {
+		file := files[i]
+		if file.IsDir() {
+			err = os.RemoveAll(filepath.Join(dir.fullName, file.Name()))
+			if err != nil && !os.IsNotExist(err) {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func (dir *Directory) RemoveAll() error {
