@@ -92,7 +92,16 @@ func (dir *Directory) Create(perm os.FileMode) error {
 }
 
 func (dir *Directory) CreateFile(name string) (*FileInfo, error) {
-	return NewFile(filepath.Join(dir.fullName, name))
+	newFile, err := NewFile(filepath.Join(dir.fullName, name))
+	if err != nil {
+		return nil, err
+	}
+	err = newFile.Create()
+	if err != nil {
+		return nil, err
+	}
+
+	return newFile, nil
 }
 
 func newDirectory(path string, fileInfo os.FileInfo) *Directory {

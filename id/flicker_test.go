@@ -12,7 +12,7 @@ import (
 )
 
 func newFlicker() *Flicker {
-	db, err := sql.Open("mysql", "root:sasasasasa@tcp(127.0.0.1:3306)/test")
+	db, err := sql.Open("mysql", "root:yidane1024@tcp(127.0.0.1:3306)/test")
 	if err != nil {
 		panic(err)
 	}
